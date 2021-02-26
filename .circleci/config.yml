@@ -49,7 +49,7 @@ jobs:
       - run:
           name: deploy to aws s3
           command: |
-            if [ "${CURRENT_BRANCH}" == "master" ]
+            if [ "${CURRENT_BRANCH}" == "main" ]
             then
               aws --region ${AWS_REGION} s3 sync ~/repo/build s3://${AWS_BUCKET_PRD} --delete
             elif [ "${CURRENT_BRANCH}" == "stg" ]
@@ -87,7 +87,7 @@ jobs:
           name: deploy to aws s3
           command: |
             aws configure set preview.cloudfront
-            if [ "${CURRENT_BRANCH}" == "master" ]
+            if [ "${CURRENT_BRANCH}" == "main" ]
             then
               aws cloudfront create-invalidation --distribution-id ${AWS_DISTRIBUTION_ID_PRD} --paths /\*
             elif [ "${CURRENT_BRANCH}" == "stg" ]
@@ -96,3 +96,26 @@ jobs:
             else
               aws cloudfront create-invalidation --distribution-id ${AWS_DISTRIBUTION_ID_DEV} --paths /\*
             fi
+
+workflows:
+  build-and-deploy:
+    jobs:
+      - build
+      - deploy-to-aws-s3:
+          requires:
+            - build
+          filters:
+            branches:
+              only:
+                - dev
+                - stg
+                - main
+      - deploy-to-aws-cloudfront:
+          requires:
+            - deploy-to-aws-s3
+          filters:
+            branches:
+              only:
+                - dev
+                - stg
+                - main
